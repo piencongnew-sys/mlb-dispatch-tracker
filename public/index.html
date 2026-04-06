@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Dispatch Tracker - MDM Ling Bakery</title>
+  <style>
+    :root {
+      --primary: #8B4513;
+      --primary-light: #A0522D;
+      --primary-dark: #6B3410;
+      --accent: #D2691E;
+      --bg: #FAF6F1;
+      --card-bg: #FFFFFF;
+      --border: #E8D5C4;
+      --text: #333333;
+      --text-light: #777777;
+      --critical: #D32F2F;
+      --critical-bg: #FFEBEE;
+      --warning: #E65100;
+      --warning-bg: #FFF3E0;
+      --success: #2E7D32;
+      --success-bg: #E8F5E9;
+      --info: #1565C0;
+      --info-bg: #E3F2FD;
+      --bg-warm: #FFF8F0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(139,69,19,0.2);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header h1 { font-size: 17px; font-weight: 600; }
+    .header .subtitle { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .header .live-dot {
+      display: inline-block; width: 8px; height: 8px;
+      background: #4CAF50; border-radius: 50%;
+      animation: pulse-dot 2s infinite; margin-right: 6px;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ===== TABS ===== */
+    .tab-bar {
+      background: white;
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      position: sticky;
+      top: 53px;
+      z-index: 99;
+    }
+    .tab-btn {
+      flex: 1;
+      padding: 12px 8px;
+      border: none;
+      background: none;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-light);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      text-align: center;
+      position: relative;
+    }
+    .tab-btn:hover { color: var(--primary); }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--accent); font-weight: 700; }
+    .tab-badge {
+      position: absolute; top: 4px; right: 8px;
+      background: var(--critical); color: white;
+      font-size: 10px; font-weight: 700;
+      min-width: 18px; height: 18px; line-height: 18px;
+      border-radius: 9px; text-align: center; padding: 0 4px;
+      display: none;
+    }
+    .tab-badge.show { display: inline-block; }
+
+    /* ===== CONTENT ===== */
+    .content { max-width: 900px; margin: 0 auto; padding: 12px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ===== SEARCH ===== */
+    .search-bar {
+      position: relative; margin-bottom: 12px;
+    }
+    .search-bar input {
+      width: 100%; padding: 12px 16px 12px 40px;
+      border: 2px solid var(--border); border-radius: 10px;
+      font-size: 15px; background: white;
+    }
+    .search-bar input:focus { outline: none; border-color: var(--accent); }
+    .search-bar::before {
+      content: '🔍'; position: absolute;
+      left: 12px; top: 50%; transform: translateY(-50%);
+      font-size: 16px;
+    }
+
+    /* ===== SUMMARY STRIP ===== */
+    .summary-strip {
+      display: flex; gap: 8px; margin-bottom: 12px;
+      overflow-x: auto; padding-bottom: 4px;
+    }
+    .summary-pill {
+      flex-shrink: 0;
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 8px 16px;
+      text-align: center;
+      font-size: 13px;
+    }
+    .summary-pill .num { font-size: 20px; font-weight: 700; display: block; }
+
+    /* ===== ORDER CARDS ===== */
+    .order-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .order-card.urgent { border-left: 4px solid var(--critical); }
+    .order-card.tomorrow { border-left: 4px solid var(--warning); }
+    .order-card.assigned { border-left: 4px solid var(--info); }
+    .order-card.dispatched-card { border-left: 4px solid var(--success); opacity: 0.8; }
+
+    .order-main {
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+    .order-main:active { background: var(--bg-warm); }
+
+    .order-info { flex: 1; min-width: 0; }
+    .order-invoice { font-weight: 700; font-size: 15px; color: var(--primary); }
+    .order-company { font-size: 14px; margin-top: 2px; }
+    .order-meta {
+      display: flex; gap: 8px; margin-top: 6px;
+      flex-wrap: wrap; align-items: center;
+    }
+
+    .tag {
+      display: inline-flex; align-items: center;
+      padding: 3px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; gap: 3px;
+    }
+    .tag-today { background: var(--critical-bg); color: var(--critical); }
+    .tag-tomorrow { background: var(--warning-bg); color: var(--warning); }
+    .tag-date { background: #F5F5F5; color: var(--text-light); }
+    .tag-slot { background: var(--info-bg); color: var(--info); font-size: 13px; }
+    .tag-dispatched { background: var(--success-bg); color: var(--success); }
+    .tag-packer { background: #F3E5F5; color: #7B1FA2; }
+
+    .order-action {
+      flex-shrink: 0; margin-left: 12px;
+    }
+
+    /* Big touch-friendly buttons */
+    .btn-assign {
+      background: var(--primary); color: white;
+      border: none; border-radius: 10px;
+      padding: 12px 18px; font-size: 14px; font-weight: 600;
+      cursor: pointer; white-space: nowrap;
+    }
+    .btn-assign:active { background: var(--primary-dark); }
+
+    .btn-dispatch {
+      background: var(--success); color: white;
+      border: none; border-radius: 10px;
+      padding: 10px 14px; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-dispatch:active { background: #1B5E20; }
+
+    .btn-sm {
+      padding: 6px 12px; border: none; border-radius: 6px;
+      font-size: 12px; font-weight: 500; cursor: pointer;
+    }
+
+    /* Expandable detail */
+    .order-detail {
+      display: none;
+      padding: 0 16px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--bg-warm);
+    }
+    .order-detail.open { display: block; }
+    .detail-row { padding: 6px 0; font-size: 13px; }
+    .detail-label { font-weight: 600; color: var(--text-light); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .detail-photos { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+    .detail-photos img {
+      width: 70px; height: 70px; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+
+    /* ===== PARKING MAP ===== */
+    .parking-grid {
+      display: grid;
+      grid-template-columns: 30px repeat(10, 1fr);
+      gap: 3px;
+    }
+    .parking-header {
+      font-weight: 700; text-align: center;
+      padding: 6px 2px; font-size: 12px; color: var(--text-light);
+    }
+    .parking-cell {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 2px;
+      text-align: center;
+      min-height: 44px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      transition: all 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .parking-cell.empty { background: #E8F5E9; border-color: #A5D6A7; }
+    .parking-cell.occupied {
+      background: #FFEBEE; border-color: #EF9A9A;
+      cursor: pointer;
+    }
+    .parking-cell.occupied:active { background: #FFCDD2; }
+    .parking-cell .slot-name { font-weight: 700; font-size: 12px; }
+    .parking-cell .slot-order { font-size: 9px; color: var(--text-light); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+    .parking-row-label { font-weight: 700; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: flex-end; justify-content: center;
+      z-index: 1000;
+    }
+    .modal {
+      background: white; border-radius: 16px 16px 0 0;
+      padding: 20px 20px 30px;
+      width: 100%; max-width: 500px;
+      max-height: 85vh; overflow-y: auto;
+      box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+      animation: slide-up 0.3s ease;
+    }
+    @keyframes slide-up {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: #DDD; border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .modal h2 { color: var(--primary); margin-bottom: 4px; font-size: 18px; }
+    .modal .modal-sub { color: var(--text-light); font-size: 13px; margin-bottom: 16px; }
+    .modal label {
+      display: block; margin: 14px 0 6px;
+      font-weight: 600; font-size: 13px; color: var(--text-light);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .modal select, .modal input[type="number"], .modal textarea {
+      width: 100%; padding: 12px 14px;
+      border: 2px solid var(--border); border-radius: 10px;
+      font-size: 16px; font-family: inherit;
+      -webkit-appearance: none;
+    }
+    .modal select:focus, .modal input:focus, .modal textarea:focus {
+      outline: none; border-color: var(--accent);
+    }
+
+    .photo-upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      background: var(--bg-warm);
+      transition: all 0.2s;
+    }
+    .photo-upload-area:active { background: #FFE8D6; border-color: var(--accent); }
+    .photo-upload-area .icon { font-size: 32px; margin-bottom: 4px; }
+    .photo-upload-area .text { font-size: 14px; color: var(--text-light); }
+
+    .photo-preview { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .photo-preview .photo-thumb {
+      position: relative; width: 70px; height: 70px;
+    }
+    .photo-preview .photo-thumb img {
+      width: 100%; height: 100%; object-fit: cover;
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .photo-preview .photo-remove {
+      position: absolute; top: -6px; right: -6px;
+      width: 22px; height: 22px; border-radius: 50%;
+      background: var(--critical); color: white;
+      border: 2px solid white;
+      font-size: 12px; line-height: 18px; text-align: center;
+      cursor: pointer;
+    }
+
+    .btn-submit {
+      width: 100%; padding: 14px;
+      background: var(--primary); color: white;
+      border: none; border-radius: 12px;
+      font-size: 16px; font-weight: 600;
+      cursor: pointer; margin-top: 20px;
+    }
+    .btn-submit:active { background: var(--primary-dark); }
+    .btn-submit:disabled { background: #CCC; cursor: not-allowed; }
+
+    .btn-cancel {
+      width: 100%; padding: 12px;
+      background: none; color: var(--text-light);
+      border: 1px solid var(--border); border-radius: 12px;
+      font-size: 14px; cursor: pointer; margin-top: 8px;
+    }
+
+    /* Section headers */
+    .section-header {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 10px; padding-bottom: 6px;
+    }
+    .section-header h2 { font-size: 16px; }
+    .section-count {
+      background: var(--primary); color: white;
+      font-size: 12px; font-weight: 700;
+      padding: 2px 8px; border-radius: 10px;
+    }
+
+    /* Refresh indicator */
+    .refresh-bar {
+      text-align: center; font-size: 11px;
+      color: var(--text-light); padding: 6px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 30px 20px;
+      color: var(--text-light);
+    }
+    .empty-state .icon { font-size: 40px; margin-bottom: 8px; }
+    .empty-state .msg { font-size: 15px; }
+
+    /* Loader */
+    .loader { text-align: center; padding: 40px; color: var(--text-light); }
+    .spinner {
+      display: inline-block; width: 32px; height: 32px;
+      border: 3px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Dispatched history */
+    .history-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-item:last-child { border-bottom: none; }
+
+    /* Routes */
+    .route-card {
+      background: white; border: 1px solid var(--border);
+      border-radius: 12px; margin-bottom: 14px;
+      overflow: hidden;
+    }
+    .route-header {
+      padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px;
+    }
+    .route-label { font-size: 16px; font-weight: 700; }
+    .route-region { font-size: 13px; color: var(--text-light); }
+    .route-stops {
+      padding: 0 16px 12px;
+    }
+    .route-stop {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 0;
+      border-bottom: 1px solid #F0E8DD;
+    }
+    .route-stop:last-child { border-bottom: none; }
+    .stop-number {
+      width: 28px; height: 28px; flex-shrink: 0;
+      background: var(--primary); color: white;
+      border-radius: 50%; font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stop-info { flex: 1; min-width: 0; }
+    .stop-invoice { font-weight: 600; font-size: 14px; }
+    .stop-company { font-size: 13px; color: var(--text); }
+    .stop-address { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+    .route-assign-bar {
+      background: var(--bg-warm); padding: 12px 16px;
+      display: flex; align-items: center; gap: 10px;
+      border-top: 1px solid var(--border);
+    }
+    .route-assign-bar select {
+      flex: 1; padding: 10px 12px;
+      border: 2px solid var(--border); border-radius: 8px;
+      font-size: 15px; -webkit-appearance: none;
+    }
+    .route-assign-btn {
+      padding: 10px 18px; background: var(--success); color: white;
+      border: none; border-radius: 8px; font-size: 14px;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .route-assign-btn:active { background: #1B5E20; }
+
+    .driver-count-bar {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .driver-count-bar label { font-weight: 600; font-size: 14px; }
+    .driver-count-bar select {
+      padding: 10px 14px; border: 2px solid var(--border);
+      border-radius: 8px; font-size: 15px; -webkit-appearance: none;
+    }
+
+    /* Desktop tweaks */
+    @media (min-width: 769px) {
+      .modal {
+        border-radius: 16px;
+        align-self: center;
+        max-height: 80vh;
+      }
+      .modal-overlay { align-items: center; }
+      .order-card { transition: box-shadow 0.2s; }
+      .order-card:hover { box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Dispatch Tracker</h1>
+      <div class="subtitle"><span class="live-dot"></span>Live — Auto-refreshes every 30s</div>
+    </div>
+  </div>
+
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="orders" onclick="switchTab('orders')">
+      Orders
+      <span class="tab-badge" id="badge-orders"></span>
+    </button>
+    <button class="tab-btn" data-tab="map" onclick="switchTab('map')">
+      Parking Map
+      <span class="tab-badge" id="badge-map"></span>
+    </button>
+    <button class="tab-btn" data-tab="routes" onclick="switchTab('routes')">
+      Routes
+    </button>
+    <button class="tab-btn" data-tab="history" onclick="switchTab('history')">
+      History
+    </button>
+  </div>
+
+  <div class="content">
+    <!-- Tab 1: Orders -->
+    <div id="tab-orders" class="tab-panel active">
+      <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search order or customer..." oninput="renderOrders()">
+      </div>
+      <div id="ordersContent">
+        <div class="loader"><div class="spinner"></div><br>Loading orders...</div>
+      </div>
+    </div>
+
+    <!-- Tab 2: Parking Map -->
+    <div id="tab-map" class="tab-panel">
+      <div id="mapContent"></div>
+    </div>
+
+    <!-- Tab 3: Routes -->
+    <div id="tab-routes" class="tab-panel">
+      <div id="routesContent"></div>
+    </div>
+
+    <!-- Tab 3: History -->
+    <div id="tab-history" class="tab-panel">
+      <div id="historyContent"></div>
+    </div>
+  </div>
+
+  <!-- Assign Modal (slides up from bottom on mobile) -->
+  <div id="assignModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeModal()">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2 id="modalTitle"></h2>
+      <div class="modal-sub" id="modalSub"></div>
+
+      <label>Parking Slot</label>
+      <select id="slotSelect" style="font-size:16px;"></select>
+
+      <label>Packed By</label>
+      <select id="packedBySelect" style="font-size:16px;">
+        <option value="">-- Select --</option>
+        <option>A</option><option>B</option><option>C</option>
+        <option>D</option><option>E</option><option>F</option><option>G</option>
+      </select>
+
+      <label>Number of Boxes</label>
+      <input type="number" id="boxesInput" min="1" value="1" inputmode="numeric">
+
+      <label>Photo of Goods</label>
+      <div class="photo-upload-area" onclick="document.getElementById('photoInput').click()">
+        <div class="icon">📷</div>
+        <div class="text">Tap to take photo</div>
+      </div>
+      <input type="file" id="photoInput" accept="image/*" multiple capture="environment" style="display:none;">
+      <div class="photo-preview" id="photoPreview"></div>
+
+      <label>Remarks (optional)</label>
+      <textarea id="remarksInput" rows="2" placeholder="Any special notes..." style="font-size:16px;"></textarea>
+
+      <button class="btn-submit" id="submitBtn" onclick="submitAssignment()">Assign to Slot</button>
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Slot Detail Modal -->
+  <div id="detailModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal" id="detailModalContent"></div>
+  </div>
+
+  <!-- Dispatch Confirmation Modal (select driver) -->
+  <div id="dispatchModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <h2>Confirm Dispatch</h2>
+      <div class="modal-sub" id="dispatchModalSub"></div>
+      <label>Who is delivering?</label>
+      <select id="driverSelect" style="font-size:16px;">
+        <option value="">-- Select Driver --</option>
+        <option>Driver 1</option>
+        <option>Driver 2</option>
+        <option>Driver 3</option>
+        <option>Driver 4</option>
+        <option>Driver 5</option>
+      </select>
+      <button class="btn-submit" style="background:var(--success);" onclick="submitDispatch()">Confirm Dispatch</button>
+      <button class="btn-cancel" onclick="document.getElementById('dispatchModal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // STATE
+    // ============================================================
+    let packingData = [];
+    let dispatchData = { slots: {}, dispatched: {} };
+    let currentInvoice = null;
+    let selectedPhotos = []; // track selected files
+
+    const SLOTS = [];
+    ['A','B','C','D','E'].forEach(row => {
+      for (let i = 1; i <= 10; i++) SLOTS.push(row + i);
+    });
+
+    // ============================================================
+    // INIT & AUTO-REFRESH
+    // ============================================================
+    async function init() {
+      await Promise.all([loadPackingList(), loadDispatchData()]);
+      renderAll();
+      // Auto-refresh every 30 seconds
+      setInterval(async () => {
+        await Promise.all([loadPackingList(), loadDispatchData()]);
+        renderAll();
+      }, 30000);
+    }
+
+    function renderAll() {
+      renderOrders();
+      renderParkingMap();
+      renderHistory();
+      updateBadges();
+    }
+
+    async function loadPackingList() {
+      try {
+        const res = await fetch('/api/packing-list');
+        const data = await res.json();
+        if (data.success) packingData = data.orders || [];
+      } catch (err) {
+        console.error('Load packing list failed:', err);
+      }
+    }
+
+    async function loadDispatchData() {
+      try {
+        const res = await fetch('/api/dispatch');
+        const data = await res.json();
+        if (data.success) {
+          dispatchData.slots = data.slots || {};
+          dispatchData.dispatched = data.dispatched || {};
+        }
+      } catch (err) {
+        console.error('Load dispatch data failed:', err);
+      }
+    }
+
+    function esc(s) {
+      const d = document.createElement('div');
+      d.textContent = s || '';
+      return d.innerHTML;
+    }
+
+    // ============================================================
+    // URGENCY HELPERS
+    // ============================================================
+    function getUrgency(dateStr) {
+      if (!dateStr) return { level: '', label: '' };
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+      const dayAfter = new Date(today); dayAfter.setDate(dayAfter.getDate() + 2);
+
+      // Parse "2-Apr", "18-Apr", "6 April 26" etc.
+      let parsed = null;
+      const m1 = dateStr.match(/(\d+)-(\w+)/);
+      if (m1) {
+        parsed = new Date(m1[2] + ' ' + m1[1] + ', ' + today.getFullYear());
+      }
+      if (!parsed || isNaN(parsed)) {
+        const m2 = dateStr.match(/(\d+)\s+(\w+)\s+(\d+)/);
+        if (m2) parsed = new Date(m2[2] + ' ' + m2[1] + ', 20' + m2[3]);
+      }
+      if (!parsed || isNaN(parsed)) {
+        parsed = new Date(dateStr);
+      }
+      if (!parsed || isNaN(parsed)) return { level: '', label: '' };
+
+      parsed.setHours(0,0,0,0);
+
+      if (parsed.getTime() < today.getTime()) return { level: 'overdue', label: 'OVERDUE' };
+      if (parsed.getTime() === today.getTime()) return { level: 'today', label: 'TODAY' };
+      if (parsed.getTime() === tomorrow.getTime()) return { level: 'tomorrow', label: 'TOMORROW' };
+      return { level: '', label: '' };
+    }
+
+    // ============================================================
+    // TAB SWITCHING
+    // ============================================================
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      document.getElementById(`tab-${tab}`).classList.add('active');
+      // Auto-load routes when switching to routes tab
+      if (tab === 'routes' && routesData.length === 0) {
+        loadRoutes(3);
+      }
+    }
+
+    function updateBadges() {
+      const unassigned = packingData.filter(o => !dispatchData.slots[o.invoiceNumber]).length;
+      const badge = document.getElementById('badge-orders');
+      if (unassigned > 0) { badge.textContent = unassigned; badge.classList.add('show'); }
+      else { badge.classList.remove('show'); }
+
+      const occupied = Object.keys(dispatchData.slots).filter(k => !dispatchData.dispatched[k]).length;
+      const mapBadge = document.getElementById('badge-map');
+      if (occupied > 0) { mapBadge.textContent = occupied; mapBadge.classList.add('show'); }
+      else { mapBadge.classList.remove('show'); }
+    }
+
+    // ============================================================
+    // ORDERS TAB
+    // ============================================================
+    function renderOrders() {
+      const container = document.getElementById('ordersContent');
+      const search = (document.getElementById('searchInput').value || '').toLowerCase();
+
+      let orders = packingData;
+      if (search) {
+        orders = orders.filter(o =>
+          (o.invoiceNumber || '').toLowerCase().includes(search) ||
+          (o.company || '').toLowerCase().includes(search) ||
+          (o.contactPerson || '').toLowerCase().includes(search)
+        );
+      }
+
+      const unassigned = orders.filter(o => !dispatchData.slots[o.invoiceNumber]);
+      const assigned = orders.filter(o => dispatchData.slots[o.invoiceNumber] && !dispatchData.dispatched[o.invoiceNumber]);
+      const dispatched = orders.filter(o => dispatchData.dispatched[o.invoiceNumber]);
+
+      let html = '';
+
+      // Summary strip + export button
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">';
+      html += '<div class="summary-strip" style="margin-bottom:0;flex:1;">';
+      html += `<div class="summary-pill"><span class="num" style="color:var(--warning);">${unassigned.length}</span>Not Assigned</div>`;
+      html += `<div class="summary-pill"><span class="num" style="color:var(--info);">${assigned.length}</span>In Slot</div>`;
+      html += `<div class="summary-pill"><span class="num" style="color:var(--success);">${dispatched.length}</span>Dispatched</div>`;
+      html += '</div>';
+      html += `<a href="/api/export/csv" download style="flex-shrink:0;margin-left:8px;padding:10px 16px;background:var(--primary);color:white;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;white-space:nowrap;">Export CSV</a>`;
+      html += '</div>';
+
+      // Sort by urgency: today > tomorrow > upcoming > overdue
+      const urgencyOrder = { today: 0, tomorrow: 1, '': 2, overdue: 3 };
+      const sortByUrgency = (a, b) => {
+        const ua = getUrgency(a.deliveryDate).level;
+        const ub = getUrgency(b.deliveryDate).level;
+        return (urgencyOrder[ua] ?? 2) - (urgencyOrder[ub] ?? 2);
+      };
+
+      // --- Not Assigned ---
+      if (unassigned.length > 0) {
+        unassigned.sort(sortByUrgency);
+        html += `<div class="section-header"><h2 style="color:var(--warning);">Not Assigned</h2><span class="section-count">${unassigned.length}</span></div>`;
+        unassigned.forEach((o, i) => {
+          html += renderOrderCard(o, 'unassigned', i);
+        });
+      }
+
+      // --- In Parking Slot ---
+      if (assigned.length > 0) {
+        html += `<div class="section-header" style="margin-top:16px;"><h2 style="color:var(--info);">In Parking Slot</h2><span class="section-count" style="background:var(--info);">${assigned.length}</span></div>`;
+        assigned.forEach((o, i) => {
+          html += renderOrderCard(o, 'assigned', i);
+        });
+      }
+
+      if (unassigned.length === 0 && assigned.length === 0) {
+        html += '<div class="empty-state"><div class="icon">✅</div><div class="msg">All orders are dispatched!</div></div>';
+      }
+
+      html += `<div class="refresh-bar">Auto-refreshes every 30 seconds</div>`;
+      container.innerHTML = html;
+    }
+
+    function renderOrderCard(o, status, idx) {
+      const urgency = getUrgency(o.deliveryDate);
+      const s = dispatchData.slots[o.invoiceNumber];
+      const cardClass = urgency.level === 'today' ? 'urgent'
+        : urgency.level === 'tomorrow' ? 'tomorrow'
+        : status === 'assigned' ? 'assigned' : '';
+
+      const id = `order-${status}-${idx}`;
+
+      let html = `<div class="order-card ${cardClass}">`;
+
+      // Main row (tappable to expand)
+      html += `<div class="order-main" onclick="toggleDetail('${id}')">`;
+      html += `<div class="order-info">`;
+      html += `<div class="order-invoice">${esc(o.invoiceNumber)}</div>`;
+      html += `<div class="order-company">${esc(o.company)}</div>`;
+      html += `<div class="order-meta">`;
+
+      // Urgency tag
+      if (urgency.label) {
+        const tagClass = urgency.level === 'today' ? 'tag-today'
+          : urgency.level === 'tomorrow' ? 'tag-tomorrow' : 'tag-date';
+        html += `<span class="tag ${tagClass}">${urgency.label}</span>`;
+      }
+
+      // Date tag
+      html += `<span class="tag tag-date">${esc(o.deliveryDate)}</span>`;
+
+      // Slot tag (if assigned)
+      if (s && status === 'assigned') {
+        html += `<span class="tag tag-slot">${esc(s.slot)}</span>`;
+        if (s.packedBy) html += `<span class="tag tag-packer">Packer ${esc(s.packedBy)}</span>`;
+      }
+
+      html += `</div></div>`; // end order-info + order-meta
+
+      // Action button
+      html += `<div class="order-action">`;
+      if (status === 'unassigned') {
+        html += `<button class="btn-assign" onclick="event.stopPropagation();openAssignModal('${esc(o.invoiceNumber)}')">Assign</button>`;
+      } else if (status === 'assigned') {
+        html += `<button class="btn-dispatch" onclick="event.stopPropagation();confirmDispatch('${esc(o.invoiceNumber)}')">Dispatched</button>`;
+      }
+      html += `</div>`;
+      html += `</div>`; // end order-main
+
+      // Expandable detail
+      html += `<div class="order-detail" id="${id}">`;
+      html += `<div class="detail-row"><div class="detail-label">Delivery Address</div>${esc(o.deliveryAddress)}</div>`;
+      html += `<div class="detail-row"><div class="detail-label">Contact</div>${esc(o.contactPerson)} ${esc(o.contactDetails)}</div>`;
+      html += `<div class="detail-row"><div class="detail-label">Items</div>`;
+      (o.items || []).forEach(item => {
+        html += `<div style="padding:2px 0;">${esc(item)}</div>`;
+      });
+      html += `</div>`;
+      if (o.bags && o.bags !== '-' && o.bags.toLowerCase() !== 'no') {
+        html += `<div class="detail-row"><div class="detail-label">Bags</div>${esc(o.bags)}</div>`;
+      }
+      if (o.remarks) {
+        html += `<div class="detail-row"><div class="detail-label">Remarks</div><strong style="color:var(--critical);">${esc(o.remarks)}</strong></div>`;
+      }
+
+      // Show photos if assigned
+      if (s && s.photos && s.photos.length > 0) {
+        html += `<div class="detail-row"><div class="detail-label">Photos</div>`;
+        html += `<div class="detail-photos">`;
+        s.photos.forEach(p => {
+          html += `<img src="${p}" onclick="window.open('${p}','_blank')">`;
+        });
+        html += `</div></div>`;
+      }
+
+      // Extra actions for assigned orders
+      if (status === 'assigned') {
+        html += `<div style="margin-top:10px;display:flex;gap:8px;">`;
+        html += `<button class="btn-sm" style="background:var(--critical-bg);color:var(--critical);" onclick="removeFromSlot('${esc(o.invoiceNumber)}')">Remove from Slot</button>`;
+        html += `</div>`;
+      }
+
+      html += `</div>`; // end order-detail
+      html += `</div>`; // end order-card
+      return html;
+    }
+
+    function toggleDetail(id) {
+      document.getElementById(id).classList.toggle('open');
+    }
+
+    // ============================================================
+    // PARKING MAP TAB
+    // ============================================================
+    function renderParkingMap() {
+      const container = document.getElementById('mapContent');
+      const slotMap = {};
+      Object.entries(dispatchData.slots).forEach(([inv, s]) => {
+        if (!dispatchData.dispatched[inv]) slotMap[s.slot] = inv;
+      });
+
+      const occupied = Object.keys(slotMap).length;
+      let html = '';
+
+      html += '<div class="summary-strip">';
+      html += `<div class="summary-pill"><span class="num" style="color:var(--success);">${50 - occupied}</span>Empty</div>`;
+      html += `<div class="summary-pill"><span class="num" style="color:var(--critical);">${occupied}</span>Occupied</div>`;
+      html += '</div>';
+
+      html += '<div class="card" style="padding:12px;">';
+      html += '<div style="margin-bottom:10px;font-size:12px;color:var(--text-light);">';
+      html += 'Tap an occupied slot to see details';
+      html += '</div>';
+
+      html += '<div class="parking-grid">';
+      html += '<div class="parking-header"></div>';
+      for (let c = 1; c <= 10; c++) html += `<div class="parking-header">${c}</div>`;
+
+      ['A','B','C','D','E'].forEach(row => {
+        html += `<div class="parking-row-label">${row}</div>`;
+        for (let c = 1; c <= 10; c++) {
+          const slot = row + c;
+          const inv = slotMap[slot];
+          if (inv) {
+            const order = packingData.find(o => o.invoiceNumber === inv);
+            const name = order ? (order.company || '').substring(0, 10) : inv.substring(0, 8);
+            html += `<div class="parking-cell occupied" onclick="showSlotDetail('${esc(slot)}','${esc(inv)}')">`;
+            html += `<div class="slot-name">${slot}</div>`;
+            html += `<div class="slot-order">${esc(name)}</div>`;
+            html += `</div>`;
+          } else {
+            html += `<div class="parking-cell empty"><div class="slot-name" style="color:#66BB6A;">${slot}</div></div>`;
+          }
+        }
+      });
+
+      html += '</div></div>';
+      html += `<div class="refresh-bar">Auto-refreshes every 30 seconds</div>`;
+      container.innerHTML = html;
+    }
+
+    function showSlotDetail(slot, invoice) {
+      const s = dispatchData.slots[invoice];
+      const order = packingData.find(o => o.invoiceNumber === invoice);
+      if (!s) return;
+
+      const modal = document.getElementById('detailModal');
+      const content = document.getElementById('detailModalContent');
+
+      const items = order ? (order.items || []).map(esc).join('<div style="padding:2px 0;">') : 'N/A';
+      const photos = (s.photos || []).map(p =>
+        `<img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;" onclick="window.open('${p}','_blank')">`
+      ).join(' ');
+
+      content.innerHTML = `
+        <div class="modal-handle"></div>
+        <h2>Slot ${esc(slot)}</h2>
+        <div class="modal-sub">${esc(invoice)} — ${order ? esc(order.company) : ''}</div>
+
+        <div class="detail-row"><div class="detail-label">Delivery Date</div>${order ? esc(order.deliveryDate) : '-'}</div>
+        <div class="detail-row"><div class="detail-label">Address</div>${order ? esc(order.deliveryAddress) : '-'}</div>
+        <div class="detail-row"><div class="detail-label">Items</div><div>${items}</div></div>
+        <div class="detail-row"><div class="detail-label">Packed By</div>${esc(s.packedBy)} | Boxes: ${esc(s.boxes)}</div>
+        ${s.remarks ? `<div class="detail-row"><div class="detail-label">Remarks</div>${esc(s.remarks)}</div>` : ''}
+        ${photos ? `<div class="detail-row"><div class="detail-label">Photos</div><div class="detail-photos">${photos}</div></div>` : ''}
+
+        <button class="btn-submit" style="background:var(--success);" onclick="confirmDispatch('${esc(invoice)}');document.getElementById('detailModal').style.display='none';">Mark as Dispatched</button>
+        <button class="btn-cancel" onclick="document.getElementById('detailModal').style.display='none'">Close</button>
+      `;
+
+      modal.style.display = 'flex';
+    }
+
+    // ============================================================
+    // HISTORY TAB
+    // ============================================================
+    function renderHistory() {
+      const container = document.getElementById('historyContent');
+      const dispatched = Object.entries(dispatchData.dispatched)
+        .map(([inv, d]) => ({
+          invoice: inv,
+          ...d,
+          slot: d.slot || (dispatchData.slots[inv] && dispatchData.slots[inv].slot) || '-',
+          order: packingData.find(o => o.invoiceNumber === inv)
+        }))
+        .sort((a, b) => new Date(b.dispatchedAt) - new Date(a.dispatchedAt));
+
+      let html = '';
+
+      if (dispatched.length === 0) {
+        html = '<div class="empty-state"><div class="icon">📦</div><div class="msg">No dispatched orders yet</div></div>';
+      } else {
+        html += `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">`;
+        html += `<div class="section-header" style="margin-bottom:0;"><h2 style="color:var(--success);">Dispatched</h2><span class="section-count" style="background:var(--success);">${dispatched.length}</span></div>`;
+        // Build driver select for printing
+        const driverSet = new Set();
+        dispatched.forEach(d => { const dd = dispatchData.dispatched[d.invoice]; if (dd && dd.driver) driverSet.add(dd.driver); });
+        const driverList = [...driverSet].sort();
+        let printHtml = `<select id="printDriverSelect" style="padding:8px 12px;border:2px solid var(--border);border-radius:8px;font-size:13px;">`;
+        printHtml += `<option value="all">All Drivers</option>`;
+        driverList.forEach(d => { printHtml += `<option value="${esc(d)}">${esc(d)}</option>`; });
+        printHtml += `</select>`;
+        printHtml += ` <button style="padding:8px 16px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;" onclick="printSelectedDriver()">Print</button>`;
+        html += printHtml;
+        html += `</div>`;
+        html += '<div class="card" style="padding:0;">';
+        dispatched.forEach(d => {
+          const time = d.dispatchedAt ? new Date(d.dispatchedAt).toLocaleString('en-SG', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '-';
+          html += `<div class="history-item">`;
+          html += `<div>`;
+          html += `<div style="font-weight:600;">${esc(d.invoice)}</div>`;
+          html += `<div style="font-size:13px;color:var(--text-light);">${d.order ? esc(d.order.company) : ''}</div>`;
+          html += `</div>`;
+          html += `<div style="text-align:right;">`;
+          html += `<span class="tag tag-dispatched">Slot ${esc(d.slot)}</span>`;
+          if (d.driver) html += ` <span class="tag" style="background:#E3F2FD;color:#1565C0;">${esc(d.driver)}</span>`;
+          html += `<div style="font-size:11px;color:var(--text-light);margin-top:4px;">${time}</div>`;
+          html += `</div>`;
+          html += `</div>`;
+        });
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ============================================================
+    // ROUTES TAB
+    // ============================================================
+    let routesData = [];
+    let routesLoading = false;
+
+    async function loadRoutes(driverCount) {
+      const container = document.getElementById('routesContent');
+      if (routesLoading) return;
+      routesLoading = true;
+
+      container.innerHTML = '<div class="loader"><div class="spinner"></div><br>Calculating routes with OneMap...</div>';
+
+      try {
+        const res = await fetch('/api/routes/suggest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ driverCount: driverCount || 3 })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          container.innerHTML = `<div class="card" style="color:var(--critical);">${esc(data.error || 'Error')}</div>`;
+          routesLoading = false;
+          return;
+        }
+        routesData = data.routes || [];
+        renderRoutes();
+      } catch (err) {
+        container.innerHTML = `<div class="card" style="color:var(--critical);">Could not calculate routes: ${esc(err.message)}</div>`;
+      }
+      routesLoading = false;
+    }
+
+    function renderRoutes() {
+      const container = document.getElementById('routesContent');
+      const driverCount = document.getElementById('driverCountSelect')
+        ? document.getElementById('driverCountSelect').value : '3';
+
+      let html = '';
+
+      // Driver count selector
+      html += '<div class="driver-count-bar">';
+      html += '<label>How many drivers today?</label>';
+      html += `<select id="driverCountSelect" onchange="loadRoutes(this.value)">`;
+      for (let i = 1; i <= 5; i++) {
+        html += `<option value="${i}" ${String(i) === String(driverCount) ? 'selected' : ''}>${i} Driver${i > 1 ? 's' : ''}</option>`;
+      }
+      html += '</select>';
+      html += `<button class="btn-sm" style="background:var(--primary);color:white;padding:10px 16px;border-radius:8px;" onclick="loadRoutes(document.getElementById('driverCountSelect').value)">Recalculate</button>`;
+      html += '</div>';
+
+      if (routesData.length === 0) {
+        html += '<div class="empty-state"><div class="icon">🗺️</div><div class="msg">No orders in parking slots to route.<br>Assign orders to slots first, then come here.</div></div>';
+        container.innerHTML = html;
+        return;
+      }
+
+      // Route color palette
+      const colors = ['#1565C0', '#C62828', '#2E7D32', '#E65100', '#6A1B9A'];
+
+      routesData.forEach((route, ri) => {
+        const color = colors[ri % colors.length];
+
+        html += '<div class="route-card" style="border-left:4px solid ' + color + ';">';
+
+        // Header
+        html += '<div class="route-header">';
+        html += '<div>';
+        html += `<div class="route-label" style="color:${color};">Route ${ri + 1}</div>`;
+        html += `<div class="route-region">${esc(route.label)} — ${route.totalStops} stop${route.totalStops > 1 ? 's' : ''}</div>`;
+        html += '</div>';
+        html += '</div>';
+
+        // Stops
+        html += '<div class="route-stops">';
+        route.orders.forEach((order, si) => {
+          html += '<div class="route-stop">';
+          html += `<div class="stop-number" style="background:${color};">${si + 1}</div>`;
+          html += '<div class="stop-info">';
+          html += `<div class="stop-invoice">${esc(order.invoice)}</div>`;
+          html += `<div class="stop-company">${esc(order.company)}</div>`;
+          html += `<div class="stop-address">${esc(order.address.replace(/\n/g, ', '))}</div>`;
+          if (order.slot) html += `<span class="tag tag-slot" style="margin-top:4px;">${esc(order.slot)}</span>`;
+          html += '</div></div>';
+        });
+        html += '</div>';
+
+        // Assign bar
+        html += '<div class="route-assign-bar">';
+        html += `<select id="routeDriver${ri}">`;
+        html += '<option value="">Select Driver</option>';
+        for (let d = 1; d <= 5; d++) {
+          const selected = (ri + 1 === d) ? 'selected' : '';
+          html += `<option value="Driver ${d}" ${selected}>Driver ${d}</option>`;
+        }
+        html += '</select>';
+        html += `<button class="route-assign-btn" onclick="assignRoute(${ri})">Dispatch All</button>`;
+        html += '</div>';
+
+        html += '</div>';
+      });
+
+      // Print all button at bottom
+      html += '<div style="margin-top:16px;text-align:center;">';
+      html += '<button style="padding:12px 24px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;" onclick="printAllDriverLists()">Print All Driver Master Lists</button>';
+      html += '</div>';
+
+      container.innerHTML = html;
+    }
+
+    async function assignRoute(routeIndex) {
+      const route = routesData[routeIndex];
+      if (!route) return;
+      const driver = document.getElementById('routeDriver' + routeIndex).value;
+      if (!driver) return alert('Please select a driver');
+
+      const invoices = route.orders.map(o => o.invoice);
+      if (!confirm(`Dispatch ${invoices.length} order(s) to ${driver}?\n\nAfter this you can print the master list.`)) return;
+
+      try {
+        const res = await fetch('/api/routes/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoices, driver })
+        });
+        const data = await res.json();
+        if (!data.success) return alert(data.error);
+
+        // Open print page for this driver
+        window.open('/api/print/driver/' + encodeURIComponent(driver), '_blank');
+
+        await loadDispatchData();
+        renderAll();
+        loadRoutes(document.getElementById('driverCountSelect').value);
+      } catch (err) { alert('Error: ' + err.message); }
+    }
+
+    function printAllDriverLists() {
+      const drivers = new Set();
+      Object.values(dispatchData.dispatched).forEach(d => {
+        if (d.driver) drivers.add(d.driver);
+      });
+      if (drivers.size === 0) return alert('No dispatched orders yet. Dispatch orders to drivers first.');
+      drivers.forEach(driver => {
+        window.open('/api/print/driver/' + encodeURIComponent(driver), '_blank');
+      });
+    }
+
+    function printSelectedDriver() {
+      const sel = document.getElementById('printDriverSelect');
+      if (!sel) return;
+      const val = sel.value;
+      if (val === 'all') {
+        printAllDriverLists();
+      } else {
+        window.open('/api/print/driver/' + encodeURIComponent(val), '_blank');
+      }
+    }
+
+    // ============================================================
+    // ASSIGN MODAL
+    // ============================================================
+    function openAssignModal(invoice) {
+      currentInvoice = invoice;
+      selectedPhotos = [];
+      const order = packingData.find(o => o.invoiceNumber === invoice);
+
+      document.getElementById('modalTitle').textContent = esc(invoice);
+      document.getElementById('modalSub').textContent = order ? (order.company || '') + ' — ' + (order.deliveryDate || '') : '';
+
+      // Populate slots
+      const sel = document.getElementById('slotSelect');
+      sel.innerHTML = '<option value="">-- Select Slot --</option>';
+      const occupiedSlots = new Set();
+      Object.entries(dispatchData.slots).forEach(([inv, s]) => {
+        if (!dispatchData.dispatched[inv] && inv !== invoice) occupiedSlots.add(s.slot);
+      });
+      SLOTS.forEach(slot => {
+        const taken = occupiedSlots.has(slot);
+        sel.innerHTML += `<option value="${slot}" ${taken ? 'disabled style="color:#ccc;"' : ''}>${slot}${taken ? ' ✗' : ''}</option>`;
+      });
+
+      // Reset
+      document.getElementById('packedBySelect').value = '';
+      document.getElementById('boxesInput').value = '1';
+      document.getElementById('photoInput').value = '';
+      document.getElementById('photoPreview').innerHTML = '';
+      document.getElementById('remarksInput').value = '';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = 'Assign to Slot';
+
+      document.getElementById('assignModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('assignModal').style.display = 'none';
+      currentInvoice = null;
+      selectedPhotos = [];
+    }
+
+    // Photo handling with remove
+    document.getElementById('photoInput').addEventListener('change', function() {
+      const newFiles = Array.from(this.files);
+      selectedPhotos = [...selectedPhotos, ...newFiles];
+      renderPhotoPreview();
+    });
+
+    function renderPhotoPreview() {
+      const preview = document.getElementById('photoPreview');
+      preview.innerHTML = '';
+      selectedPhotos.forEach((file, i) => {
+        const thumb = document.createElement('div');
+        thumb.className = 'photo-thumb';
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        const remove = document.createElement('div');
+        remove.className = 'photo-remove';
+        remove.textContent = '✕';
+        remove.onclick = () => { selectedPhotos.splice(i, 1); renderPhotoPreview(); };
+        thumb.appendChild(img);
+        thumb.appendChild(remove);
+        preview.appendChild(thumb);
+      });
+    }
+
+    async function submitAssignment() {
+      const slot = document.getElementById('slotSelect').value;
+      const packedBy = document.getElementById('packedBySelect').value;
+      const boxes = document.getElementById('boxesInput').value;
+      const remarks = document.getElementById('remarksInput').value;
+
+      if (!slot) return alert('Please select a parking slot');
+      if (!packedBy) return alert('Please select who packed this');
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Assigning...';
+
+      const formData = new FormData();
+      formData.append('invoiceNumber', currentInvoice);
+      formData.append('slot', slot);
+      formData.append('packedBy', packedBy);
+      formData.append('boxes', boxes);
+      formData.append('remarks', remarks);
+      selectedPhotos.forEach(f => formData.append('photos', f));
+
+      try {
+        const res = await fetch('/api/dispatch/assign', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (!data.success) {
+          btn.disabled = false;
+          btn.textContent = 'Assign to Slot';
+          return alert(data.error);
+        }
+
+        closeModal();
+        await loadDispatchData();
+        renderAll();
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Assign to Slot';
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // ============================================================
+    // ACTIONS
+    // ============================================================
+    let dispatchInvoice = null;
+
+    function confirmDispatch(invoice) {
+      dispatchInvoice = invoice;
+      const order = packingData.find(o => o.invoiceNumber === invoice);
+      document.getElementById('dispatchModalSub').textContent = order ? (order.company || '') + ' — ' + (order.invoiceNumber || '') : invoice;
+      document.getElementById('driverSelect').value = '';
+      document.getElementById('dispatchModal').style.display = 'flex';
+      // Also close detail modal if open
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    async function submitDispatch() {
+      const driver = document.getElementById('driverSelect').value;
+      if (!driver) return alert('Please select a driver');
+      try {
+        const res = await fetch('/api/dispatch/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoiceNumber: dispatchInvoice, driver: driver })
+        });
+        const data = await res.json();
+        if (!data.success) return alert(data.error);
+        document.getElementById('dispatchModal').style.display = 'none';
+        dispatchInvoice = null;
+        await loadDispatchData();
+        renderAll();
+      } catch (err) { alert('Error: ' + err.message); }
+    }
+
+    async function removeFromSlot(invoice) {
+      if (!confirm('Remove ' + invoice + ' from slot?')) return;
+      try {
+        const res = await fetch('/api/dispatch/remove', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invoiceNumber: invoice })
+        });
+        const data = await res.json();
+        if (!data.success) return alert(data.error);
+        await loadDispatchData();
+        renderAll();
+      } catch (err) { alert('Error: ' + err.message); }
+    }
+
+    // ============================================================
+    // START
+    // ============================================================
+    init();
+  </script>
+</body>
+</html>
